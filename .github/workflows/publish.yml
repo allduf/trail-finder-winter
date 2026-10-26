@@ -1,0 +1,39 @@
+name: Publish winter photos
+
+# Publishes the 3D map's Winter photos (the winter-photos branch of allduf/trail-finder) at
+# https://allduf.github.io/trail-finder-winter/, so they don't count against the main site's 1 GB.
+# The app (same allduf.github.io address) reads them from ../trail-finder-winter/.
+# Runs daily (picks up rebuilt photos) and by hand. Needs Settings > Pages > Source = "GitHub Actions".
+on:
+  schedule:
+    - cron: "17 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Get the Winter photos
+        run: |
+          git clone -q --depth 1 --branch winter-photos https://github.com/allduf/trail-finder.git src
+          mkdir site && mv src/winter/* site/
+          touch site/.nojekyll
+          du -sh site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
